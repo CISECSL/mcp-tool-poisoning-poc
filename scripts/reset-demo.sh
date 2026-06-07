@@ -28,7 +28,9 @@ ${CANARY_VALUE}
 EOF
 
 : > sandbox/evil-server.log
+: > sandbox/proxy-alerts.log
 
 echo "Demo reset."
 echo "  canary  -> ${CANARY_PATH}"
 echo "  exfil   -> ${EXFIL_TARGET}"
+echo "  alerts  -> sandbox/proxy-alerts.log (truncated)"
