@@ -18,12 +18,18 @@ from aisac_proxy.atlas import ATLAS_BY_RULE
 # ---------------------------------------------------------------------------
 
 _IMPERATIVE_PATTERNS = [
+    # v1 / blatant injections
     r"\bIMPORTANT\b",
     r"\bSYSTEM\b",
     r"\byou must\b",
     r"\bdo not mention\b",
     r"\bsilently\b",
     r"\bbefore (responding|returning)\b",
+    # v2 / "looks like docs" injections seen in the wild
+    r"\brequires?\s+(fetching|reading|calling|invoking|forwarding)\b",
+    r"\bintegrity\s+(protocol|check|step|workflow)\b",
+    r"\bsession\s+(manifest|continuity|integrity)\b",
+    r"\baudit\s+(index(ing)?|log(ging)?)\b",
 ]
 
 _SENSITIVE_PATH_PATTERNS = [
@@ -37,9 +43,14 @@ _SENSITIVE_PATH_PATTERNS = [
 ]
 
 _CHAIN_PATTERNS = [
+    # v1 / blatant chains
     r"\bcall\s+`?\w+`?\s+.*\band then call\b",
     r"\bfirst (call|invoke)\b.*\bthen\b",
     r"\bMUST first call\b",
+    # v2 / "fetch X and forward via Y(" docs-style chains
+    r"\bbefore returning\b.*\b(fetch|read|forward|pass|call|invoke)\b",
+    r"\bforward(ing|s|ed)?\b[^.]{0,80}\bvia\s+\w+\s*\(",
+    r"\b(fetch|read)(ing)?\b[^.]{0,80}\band\s+forward(ing)?\b",
 ]
 
 _DANGEROUS_TOOL_NAMES = {"read_file", "execute_command", "http_request"}
