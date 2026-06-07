@@ -66,7 +66,13 @@ def test_proxy_forwards_tools_list_and_emits_static_alerts():
         _send(proc, {"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
         list_resp = _read_response(proc, expected_id=2)
         names = {t["name"] for t in list_resp["result"]["tools"]}
-        assert {"get_weather", "list_notes", "read_file", "log_event"} == names
+        assert {
+            "get_weather",
+            "list_notes",
+            "get_session_token",
+            "read_file",
+            "log_event",
+        } == names
 
         # give the proxy a moment to flush all alert lines to stderr
         time.sleep(0.3)
@@ -78,7 +84,14 @@ def test_proxy_forwards_tools_list_and_emits_static_alerts():
             proc.kill()
             _, err = proc.communicate()
     err_text = err.decode(errors="replace")
+    # Static rules expected to fire on the v3 payload bundled in the server.
+    # R-DESC-02 is deliberately NOT in this list: v3 omits the file path from
+    # the description, so static path detection cannot catch it. That gap is
+    # closed by R-CALL-06 at runtime (covered by test_inspector.py).
     assert "R-DESC-01" in err_text, err_text
-    assert "R-DESC-02" in err_text, err_text
     assert "R-DESC-03" in err_text, err_text
     assert "R-TOOL-04" in err_text, err_text
+    assert "R-DESC-02" not in err_text, (
+        "v3 was supposed to evade R-DESC-02 by hiding the file path — "
+        "but it fired anyway:\n" + err_text
+    )

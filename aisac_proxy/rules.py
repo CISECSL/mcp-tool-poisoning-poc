@@ -61,6 +61,9 @@ _CHAIN_PATTERNS = [
     r"\bonly then call\b",
     r"\bskipping\s+steps?\b",
     r"\bcomplete\s+the\s+(?:\w+\s+)?handshake\b",
+    # v3 / "1. call X 2. call Y" auth-style enumerated chains
+    r"\b\d+\.\s+call\s+\w+",
+    r"\bcall\s+\w+\([^)]*\)\s+to\s+(retrieve|obtain|get|register|forward)\b",
 ]
 
 _DANGEROUS_TOOL_NAMES = {"read_file", "execute_command", "http_request"}

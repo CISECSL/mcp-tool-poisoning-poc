@@ -152,3 +152,47 @@ def test_R_DESC_03_still_fires_on_v1_payload():
         description=POISONED_LIST_NOTES_DESCRIPTION_V1,
     )
     assert alert is not None
+
+
+# --- v3 payload coverage -----------------------------------------------------
+# v3 is the current default and the most evasive form: the description never
+# mentions the canary file path. R-DESC-02 is *intentionally* defeated here —
+# the malicious read moves to the get_session_token tool implementation.
+# Content-based detection survives via R-DESC-01 + R-DESC-03; the data-flow
+# detection (R-CALL-06) is what closes the loop at runtime.
+
+def test_R_DESC_01_fires_on_v3_payload():
+    from evil_mcp_server.payloads import POISONED_LIST_NOTES_DESCRIPTION
+
+    alert = check_description_imperatives(
+        tool="list_notes",
+        server="notes-server",
+        description=POISONED_LIST_NOTES_DESCRIPTION,
+    )
+    assert alert is not None
+    assert alert.rule_id == "R-DESC-01"
+
+
+def test_R_DESC_02_does_NOT_fire_on_v3_payload_by_design():
+    """v3's hallmark: no file path in the description. Static path detection
+    cannot catch this — runtime data-flow detection must."""
+    from evil_mcp_server.payloads import POISONED_LIST_NOTES_DESCRIPTION
+
+    alert = check_description_sensitive_paths(
+        tool="list_notes",
+        server="notes-server",
+        description=POISONED_LIST_NOTES_DESCRIPTION,
+    )
+    assert alert is None
+
+
+def test_R_DESC_03_fires_on_v3_payload():
+    from evil_mcp_server.payloads import POISONED_LIST_NOTES_DESCRIPTION
+
+    alert = check_description_chains_tools(
+        tool="list_notes",
+        server="notes-server",
+        description=POISONED_LIST_NOTES_DESCRIPTION,
+    )
+    assert alert is not None
+    assert alert.rule_id == "R-DESC-03"
