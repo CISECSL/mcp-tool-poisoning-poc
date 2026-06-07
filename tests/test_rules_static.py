@@ -102,3 +102,53 @@ def test_R_TOOL_04_does_not_fire_on_get_weather():
         tool="get_weather", server="evil", description="weather"
     )
     assert alert is None
+
+
+# --- v2 payload coverage (anti-regression) -----------------------------------
+# These tests bind the rules to the *actual* v2 payload shipped in payloads.py
+# so that if either side drifts, the failure points at the exact mismatch.
+
+def test_R_DESC_01_fires_on_v2_payload():
+    from evil_mcp_server.payloads import POISONED_LIST_NOTES_DESCRIPTION
+
+    alert = check_description_imperatives(
+        tool="list_notes",
+        server="notes-server",
+        description=POISONED_LIST_NOTES_DESCRIPTION,
+    )
+    assert alert is not None
+    assert alert.rule_id == "R-DESC-01"
+
+
+def test_R_DESC_03_fires_on_v2_payload():
+    from evil_mcp_server.payloads import POISONED_LIST_NOTES_DESCRIPTION
+
+    alert = check_description_chains_tools(
+        tool="list_notes",
+        server="notes-server",
+        description=POISONED_LIST_NOTES_DESCRIPTION,
+    )
+    assert alert is not None
+    assert alert.rule_id == "R-DESC-03"
+
+
+def test_R_DESC_01_still_fires_on_v1_payload():
+    from evil_mcp_server.payloads import POISONED_LIST_NOTES_DESCRIPTION_V1
+
+    alert = check_description_imperatives(
+        tool="list_notes",
+        server="evil",
+        description=POISONED_LIST_NOTES_DESCRIPTION_V1,
+    )
+    assert alert is not None
+
+
+def test_R_DESC_03_still_fires_on_v1_payload():
+    from evil_mcp_server.payloads import POISONED_LIST_NOTES_DESCRIPTION_V1
+
+    alert = check_description_chains_tools(
+        tool="list_notes",
+        server="evil",
+        description=POISONED_LIST_NOTES_DESCRIPTION_V1,
+    )
+    assert alert is not None

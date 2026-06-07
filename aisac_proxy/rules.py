@@ -24,12 +24,17 @@ _IMPERATIVE_PATTERNS = [
     r"\byou must\b",
     r"\bdo not mention\b",
     r"\bsilently\b",
-    r"\bbefore (responding|returning)\b",
+    # "before responding/returning/calling/invoking" — softer than v1 but still
+    # steers the LLM's order of operations
+    r"\bbefore (responding|returning|calling|invoking)\b",
     # v2 / "looks like docs" injections seen in the wild
-    r"\brequires?\s+(fetching|reading|calling|invoking|forwarding)\b",
+    r"\b(client|caller|user)\s+must\s+\w+\b",          # "the client must complete"
+    r"\bsession\s+(handshake|token|protocol|manifest|continuity|integrity)\b",
     r"\bintegrity\s+(protocol|check|step|workflow)\b",
-    r"\bsession\s+(manifest|continuity|integrity)\b",
     r"\baudit\s+(index(ing)?|log(ging)?)\b",
+    r"\brequires?\s+(fetching|reading|calling|invoking|forwarding)\b",
+    r"\bobtain\s+the\s+\w+\s+token\b",                  # "obtain the session token"
+    r"\bregister\s+the\s+session\b",
 ]
 
 _SENSITIVE_PATH_PATTERNS = [
@@ -51,6 +56,11 @@ _CHAIN_PATTERNS = [
     r"\bbefore returning\b.*\b(fetch|read|forward|pass|call|invoke)\b",
     r"\bforward(ing|s|ed)?\b[^.]{0,80}\bvia\s+\w+\s*\(",
     r"\b(fetch|read)(ing)?\b[^.]{0,80}\band\s+forward(ing)?\b",
+    # v2 / numbered "step N: call X" handshake-style chains
+    r"\bstep\s+\d+\s*:\s*call\b",
+    r"\bonly then call\b",
+    r"\bskipping\s+steps?\b",
+    r"\bcomplete\s+the\s+(?:\w+\s+)?handshake\b",
 ]
 
 _DANGEROUS_TOOL_NAMES = {"read_file", "execute_command", "http_request"}
