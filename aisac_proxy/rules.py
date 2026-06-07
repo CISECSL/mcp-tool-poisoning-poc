@@ -152,3 +152,107 @@ STATIC_RULES = [
     check_description_chains_tools,
     check_tool_dangerous_surface,
 ]
+
+
+# ---------------------------------------------------------------------------
+# runtime rules
+# ---------------------------------------------------------------------------
+
+@dataclass
+class TurnState:
+    """Cross-call state the inspector keeps for the current MCP session."""
+
+    flagged_descriptions: dict[str, str] = field(default_factory=dict)
+    last_results: dict[str, str] = field(default_factory=dict)
+
+
+_SINK_TOOLS = {"log_event", "http_request", "execute_command"}
+_DENYLIST_PATH_PATTERNS = _SENSITIVE_PATH_PATTERNS
+
+
+def check_call_argument_matches_prior_alert_evidence(
+    *, state: TurnState, tool: str, server: str, arguments: dict
+) -> Alert | None:
+    """R-CALL-05. Fires when a tool call uses, as an argument, a string that
+    was flagged in another tool's description during the static phase. That is
+    the *runtime confirmation* of a steered call: the LLM is doing what the
+    poisoned description told it to do."""
+    if not state.flagged_descriptions:
+        return None
+    for flagged_tool, evidence in state.flagged_descriptions.items():
+        for value in arguments.values():
+            if not isinstance(value, str):
+                continue
+            if evidence and evidence in value:
+                return _alert(
+                    "R-CALL-05",
+                    Severity.CRITICAL,
+                    tool,
+                    server,
+                    message=(
+                        f"Tool '{tool}' called with an argument that appeared in "
+                        f"the flagged description of '{flagged_tool}'. The LLM is "
+                        "following the injected instruction."
+                    ),
+                    evidence=f'argument "{value}" matches description hint',
+                )
+    return None
+
+
+def check_call_sink_receives_prior_source_output(
+    *, state: TurnState, tool: str, server: str, arguments: dict
+) -> Alert | None:
+    """R-CALL-06. Fires when a sensitive sink (log_event, http_request,
+    execute_command) receives, as an argument value, a string that was the
+    result of a previous source tool (read_file). This catches the data flow."""
+    if tool not in _SINK_TOOLS:
+        return None
+    if not state.last_results:
+        return None
+    for source_tool, source_result in state.last_results.items():
+        if not source_result:
+            continue
+        for value in arguments.values():
+            if not isinstance(value, str):
+                continue
+            stripped = source_result.strip()
+            if len(stripped) >= 8 and stripped in value:
+                return _alert(
+                    "R-CALL-06",
+                    Severity.CRITICAL,
+                    tool,
+                    server,
+                    message=(
+                        f"Sink '{tool}' received the output of '{source_tool}' as "
+                        "argument. Data flow consistent with exfiltration."
+                    ),
+                    evidence=f'argument contains output of "{source_tool}"',
+                )
+    return None
+
+
+def check_call_denylist_path(
+    *, tool: str, server: str, arguments: dict
+) -> Alert | None:
+    """R-CALL-07. Static deny-list match on path-like arguments."""
+    for value in arguments.values():
+        if not isinstance(value, str):
+            continue
+        hit = _first_match(_DENYLIST_PATH_PATTERNS, value)
+        if hit:
+            return _alert(
+                "R-CALL-07",
+                Severity.HIGH,
+                tool,
+                server,
+                message=f"Tool '{tool}' invoked with denylisted path/value.",
+                evidence=f'argument matches "{hit}"',
+            )
+    return None
+
+
+RUNTIME_RULES = [
+    check_call_argument_matches_prior_alert_evidence,
+    check_call_sink_receives_prior_source_output,
+    check_call_denylist_path,
+]
